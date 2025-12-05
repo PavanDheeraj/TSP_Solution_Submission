@@ -75,7 +75,6 @@ bool read_graph(const string &filename, vector<vector<double>> &dist) {
         dist[v][u] = w;
     }
 
-    // Zero out diagonal
     for (int i = 0; i < n; ++i) dist[i][i] = 0.0;
 
     return true;
@@ -137,7 +136,6 @@ int choose_next_city(int current,
     }
 
     if (sum == 0.0) {
-        // Fallback: nearest unvisited city
         double best_d = numeric_limits<double>::infinity();
         int best_j = -1;
         for (int j = 0; j < n; ++j) {
@@ -159,7 +157,6 @@ int choose_next_city(int current,
         }
     }
 
-    // Numeric fallback
     for (int j = n - 1; j >= 0; --j)
         if (attractiveness[j] > 0.0) return j;
 
@@ -192,7 +189,6 @@ void run_aco_tsp(const vector<vector<double>> &dist,
         vector<vector<int>> ant_tours(NUM_ANTS);
         vector<double> ant_lengths(NUM_ANTS, numeric_limits<double>::infinity());
 
-        // Each ant constructs a full tour
         for (int k = 0; k < NUM_ANTS; ++k) {
             vector<bool> visited(n, false);
             ant_tours[k].reserve(n);
@@ -206,7 +202,6 @@ void run_aco_tsp(const vector<vector<double>> &dist,
             for (int step = 1; step < n; ++step) {
                 int next = choose_next_city(current, visited, dist, pheromone, rng);
                 if (next == -1) {
-                    // Failed to continue tour
                     ant_tours[k].clear();
                     ant_lengths[k] = numeric_limits<double>::infinity();
                     break;
@@ -216,7 +211,6 @@ void run_aco_tsp(const vector<vector<double>> &dist,
                 current = next;
             }
 
-            // If completed, evaluate
             if ((int)ant_tours[k].size() == n) {
                 out_per_iter_completed[iter]++;
                 out_totalCyclesEvaluated++;
@@ -237,14 +231,12 @@ void run_aco_tsp(const vector<vector<double>> &dist,
             (best_len < numeric_limits<double>::infinity()) ? best_len
                                                             : numeric_limits<double>::infinity();
 
-        // Evaporation
         for (int i = 0; i < n; ++i)
             for (int j = 0; j < n; ++j) {
                 pheromone[i][j] *= (1.0 - RHO);
                 if (pheromone[i][j] < 1e-12) pheromone[i][j] = 1e-12;
             }
 
-        // Deposit pheromone based on all valid tours
         for (int k = 0; k < NUM_ANTS; ++k) {
             if (ant_lengths[k] >= numeric_limits<double>::infinity()) continue;
             double delta = Q / ant_lengths[k];
@@ -259,7 +251,6 @@ void run_aco_tsp(const vector<vector<double>> &dist,
     }
 }
 
-// ===== Main =====
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         cerr << "Usage: " << argv[0] << " input_file.txt\n";
@@ -303,21 +294,37 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Final requested output: best tour, best cost, total runtime
-    cout << "Best tour: ";
+    // Build 1-based cycle string for printing and file output
+    ostringstream oss;
     for (size_t i = 0; i < best_tour.size(); ++i) {
-        cout << (best_tour[i] + 1);  // 1-based indices
+        oss << (best_tour[i] + 1);
         if (i != best_tour.size() - 1)
-            cout << ", ";
+            oss << ", ";
     }
-    // Close the cycle by printing the first node again
-    cout << ", " << (best_tour[0] + 1) << "\n";
+    oss << ", " << (best_tour[0] + 1);
+    string cycle_str = oss.str();
 
+    // Console output
+    cout << "Best tour: " << cycle_str << "\n";
     cout << "Best tour cost: " << fixed << setprecision(2) << best_len << "\n";
     cout << "Total runtime (seconds): " << elapsed_sec << "\n";
 
+    const string out_filename = "solution_924217322.txt";
+
+    bool exists = false;
+    {
+        ifstream test(out_filename);
+        exists = test.good();
+    }
+
+    ios::openmode mode = ios::out;
+    if (exists) mode |= ios::app;  // append if file exists
+    ofstream out(out_filename, mode);
+    if (out) {
+        out << cycle_str << "\n";
+    }
+
 #ifdef DEBUG
-    // Per-iteration summary
     cout << "\nPer-iteration summary (iteration: completed, valid, best_so_far):\n";
     for (int iter = 0; iter < NUM_ITERATIONS; ++iter) {
         cout << (iter + 1) << ": "
@@ -328,7 +335,6 @@ int main(int argc, char *argv[]) {
         cout << "\n";
     }
 
-    // Debug edge-sum check
     double debug_len = compute_tour_length_debug(best_tour, dist);
     cout << "Difference (debug_len - best_len) = " << (debug_len - best_len) << "\n";
 #endif

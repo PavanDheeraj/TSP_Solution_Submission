@@ -4,6 +4,7 @@
 import sys
 import math
 import time
+import os
 from typing import List, Tuple, Dict
 import networkx as nx
 
@@ -148,7 +149,6 @@ def find_eulerian_tour(multigraph: Dict[int, Dict[int, int]], start: int = 0) ->
         v = stack[-1]
         if local[v]:
             u, _ = next(iter(local[v].items()))
-            # consume edge v-u
             local[v][u] -= 1
             if local[v][u] == 0:
                 del local[v][u]
@@ -242,13 +242,18 @@ def main() -> None:
         print(f"Total runtime (seconds): {elapsed_sec:.6f}")
         sys.exit(1)
 
-    # Match ACO-style output
-    print("Best tour: ", end="")
     cycle = [v + 1 for v in tour] + [tour[0] + 1]
-    print(", ".join(str(x) for x in cycle))
+    cycle_str = ", ".join(str(x) for x in cycle)
 
+    print("Best tour: ", end="")
+    print(cycle_str)
     print(f"Best tour cost: {length:.2f}")
     print(f"Total runtime (seconds): {elapsed_sec:.6f}")
+
+    out_filename = "solution_924217322.txt"
+    mode = "a" if os.path.exists(out_filename) else "w"
+    with open(out_filename, mode) as f:
+        f.write(cycle_str + "\n")
 
     # Debug: edge-by-edge length breakdown
     # if tour:
